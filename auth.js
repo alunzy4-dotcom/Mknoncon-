@@ -50,7 +50,7 @@ let existingUser = null;
 try { existingUser = existingUserRaw ? JSON.parse(existingUserRaw) : null; } catch (_) {}
 
 if (existingToken && existingUser?.id) {
-  location.replace('dashboard.html');
+  setStatus('أنت مسجل الدخول بالفعل. يمكنك فتح لوحة العميل من الزر بعد تسجيل الدخول.', 'success');
 } else if (existingToken || existingUserRaw) {
   localStorage.removeItem('mknon_access_token');
   localStorage.removeItem('mknon_refresh_token');
@@ -68,7 +68,7 @@ loginForm.addEventListener('submit', async (e) => {
     });
 
     if (!saveSession(data)) throw new Error('تعذر إنشاء جلسة الدخول.');
-    location.href = 'dashboard.html';
+    window.location.assign('dashboard.html');
   } catch (err) {
     const msg = String(err.message || '');
     if (msg.toLowerCase().includes('invalid login credentials')) {
@@ -115,7 +115,7 @@ signupForm.addEventListener('submit', async (e) => {
       referral_code
     });
 
-    location.href = 'dashboard.html';
+    window.location.assign('dashboard.html');
   } catch (err) {
     submitBtn.disabled = false;
     submitBtn.textContent = 'إنشاء الحساب';
