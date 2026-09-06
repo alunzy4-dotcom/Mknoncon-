@@ -68,11 +68,9 @@ if (!cfg.url || !cfg.anonKey) {
     if (data?.session) {
       location.href = 'dashboard.html';
     } else {
-      if (typeof showSignup === 'function') showSignup(false);
-      loginForm.email.value = email;
-      loginForm.password.value = '';
-      setStatus('تم إنشاء الحساب. افتح بريدك الإلكتروني وأكّد التسجيل، ثم ارجع هنا واضغط تسجيل الدخول.', 'success');
-      loginForm.password.focus();
+      setStatus('تم إنشاء حسابك بنجاح. لا تحتاج لإعادة تسجيل الدخول الآن. افتح رسالة التأكيد في بريدك الإلكتروني واضغط رابط التأكيد، وبعدها سيعيدك الموقع ويدخلك تلقائياً إلى لوحة العميل.', 'success');
+      signupForm.querySelector('button[type="submit"]').disabled = true;
+      signupForm.querySelector('button[type="submit"]').textContent = 'بانتظار تأكيد البريد';
     }
   });
 
