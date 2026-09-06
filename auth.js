@@ -19,7 +19,7 @@ if (!cfg.url || !cfg.anonKey) {
 } else {
   const client = supabase.createClient(cfg.url, cfg.anonKey);
 
-  client.auth.getSession().then(({data}) => {
+  client.auth.getSession().then(({ data }) => {
     if (data?.session) location.href = 'dashboard.html';
   });
 
@@ -37,6 +37,7 @@ if (!cfg.url || !cfg.anonKey) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     setStatus('جارٍ إنشاء الحساب...');
+
     const full_name = signupForm.full_name.value.trim();
     const phone = normalizePhone(signupForm.phone.value);
     const email = signupForm.email.value.trim();
@@ -54,21 +55,7 @@ if (!cfg.url || !cfg.anonKey) {
 
     if (error) return setStatus(error.message, 'error');
 
-    // إنشاء/تحديث الملف الشخصي إن كانت سياسة RLS تسمح بذلك.
-    if (data?.user) {
-      const { error: profileError } = await client.from('profiles').upsert({
-        id: data.user.id,
-        full_name,
-        phone,
-        referral_code: data.user.id.slice(0,8).toUpperCase(),
-        referred_by: referral_code
-      }, { onConflict: 'id' });
-
-      if (profileError) {
-        console.warn('Profile upsert:', profileError.message);
-      }
-    }
-
+    // ملف العميل يُنشأ تلقائياً بواسطة trigger في Supabase.
     if (data?.session) {
       location.href = 'dashboard.html';
     } else {
@@ -78,11 +65,14 @@ if (!cfg.url || !cfg.anonKey) {
 
   resetBtn.addEventListener('click', async () => {
     const email = loginForm.email.value.trim();
-    if (!email) return setStatus('اكتب بريدك الإلكتروني أولاً ثم اضغط نسيت كلمة المرور.', 'warning');
+    if (!email) {
+      return setStatus('اكتب بريدك الإلكتروني أولاً ثم اضغط نسيت كلمة المرور.', 'warning');
+    }
 
     const { error } = await client.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://mknoncon.com/reset-password.html'
     });
+
     if (error) return setStatus(error.message, 'error');
     setStatus('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.', 'success');
   });
