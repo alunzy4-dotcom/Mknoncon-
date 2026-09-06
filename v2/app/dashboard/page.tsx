@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "../actions";
@@ -5,7 +6,14 @@ import { createRequest } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function DashboardPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const message = typeof params.message === "string" ? params.message : "";
+  const error = typeof params.error === "string" ? params.error : "";
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
@@ -25,6 +33,10 @@ export default async function DashboardPage() {
         </div>
         <form action={signOut}><button className="btn alt" type="submit">تسجيل الخروج</button></form>
       </div>
+
+      {message === "request_created" && <div className="notice">تم إرسال طلبك بنجاح.</div>}
+      {error === "invalid_request" && <div className="notice">اكتب تفاصيل الطلب بشكل أوضح قبل الإرسال.</div>}
+      {error === "request_failed" && <div className="notice">تعذر حفظ الطلب. لم يتم فقدان الجلسة؛ حاول مرة أخرى.</div>}
 
       <section className="panel">
         <h2>بيانات الحساب</h2>
@@ -60,6 +72,7 @@ export default async function DashboardPage() {
             <div className="top"><strong>{r.service_type}</strong><span className="status">{r.status}</span></div>
             <p>{r.details}</p>
             <small className="muted">{new Date(r.created_at).toLocaleString("ar-SA")}</small>
+            <p><Link href={`/dashboard/requests/${r.id}`}>عرض تفاصيل الطلب وسجل التحديثات</Link></p>
           </article>
         ))}
       </section>
