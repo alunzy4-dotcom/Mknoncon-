@@ -9,6 +9,8 @@
 .panel{background:#fff;border:1px solid var(--line);padding:26px;margin-bottom:18px}.muted{color:var(--muted)}
 .status-chip{display:inline-block;padding:6px 10px;border:1px solid var(--line);font-size:12px}.row{display:flex;gap:12px;flex-wrap:wrap}
 #error{display:none;padding:12px;border:1px solid #a33;margin-bottom:18px}
+.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field select,.field textarea{width:100%;padding:12px;border:1px solid var(--line);background:#fbfaf7}.field textarea{min-height:120px;resize:vertical}
+.request-card{border-top:1px solid var(--line);padding:16px 0}.request-card:first-child{border-top:0}
 </style>
 </head>
 <body>
@@ -16,7 +18,31 @@
   <div class="top"><div><p class="eyebrow">لوحة العميل</p><h1>مرحباً بك في مكنون كون</h1></div><button id="logout" class="btn secondary">تسجيل الخروج</button></div>
   <div id="error"></div>
   <section class="panel"><h2>بيانات الحساب</h2><p id="userInfo" class="muted">جارٍ التحميل...</p></section>
-  <section class="panel"><h2>طلباتي</h2><p class="muted">سيظهر هنا سجل طلباتك وحالتها.</p><div id="requests"></div></section>
+  <section class="panel">
+    <h2>طلب جديد</h2>
+    <p class="muted">اختر الخدمة واكتب تفاصيل طلبك، وسيظهر مباشرة في سجل طلباتك.</p>
+    <form id="requestForm">
+      <div class="field">
+        <label>نوع الخدمة</label>
+        <select id="serviceType" required>
+          <option value="">اختر الخدمة</option>
+          <option>استشارات أعمال</option>
+          <option>دراسة جدوى</option>
+          <option>تطوير موقع إلكتروني</option>
+          <option>خدمات مالية</option>
+          <option>خدمات إدارية</option>
+          <option>أخرى</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>تفاصيل الطلب</label>
+        <textarea id="requestDetails" placeholder="اكتب طلبك بالتفصيل..." required></textarea>
+      </div>
+      <button class="btn" type="submit">إرسال الطلب</button>
+      <div id="requestStatus" class="muted" style="margin-top:10px"></div>
+    </form>
+  </section>
+  <section class="panel"><h2>طلباتي</h2><p class="muted">هنا يظهر سجل طلباتك وحالتها.</p><div id="requests"></div></section>
   <section class="panel"><h2>الإحالات</h2><p class="muted">سيظهر هنا كود الإحالة الخاص بك.</p><div id="referral"></div></section>
 </main>
 <script>
@@ -48,6 +74,22 @@ function showError(message) {
   box.textContent=message;
 }
 
+function renderRequests(requests) {
+  const box = document.getElementById('requests');
+  if (!Array.isArray(requests) || !requests.length) {
+    box.innerHTML = '<p class="muted">لا توجد طلبات حتى الآن.</p>';
+    return;
+  }
+  box.innerHTML = requests.map(r => {
+    const date = r.created_at ? new Date(r.created_at).toLocaleString('ar-SA') : '';
+    return '<div class="request-card">'
+      + '<div class="row" style="justify-content:space-between"><strong>'+(r.service_type||'طلب')+'</strong><span class="status-chip">'+(r.status||'جديد')+'</span></div>'
+      + (r.details ? '<p>'+r.details+'</p>' : '')
+      + (date ? '<div class="muted">'+date+'</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
 (async()=>{
   try {
     document.getElementById('userInfo').textContent = user.email || 'تم تسجيل الدخول';
@@ -69,15 +111,48 @@ function showError(message) {
       access_token:token
     });
 
-    if (Array.isArray(requests) && requests.length) {
-      document.getElementById('requests').innerHTML=requests.map(r =>
-        '<div class="panel"><strong>'+(r.service_type||'طلب')+'</strong><div class="muted">'+(r.status||'جديد')+'</div></div>'
-      ).join('');
-    }
+    renderRequests(requests);
   } catch (err) {
     showError('تعذر تحميل بيانات الحساب: ' + (err.message || err));
   }
 })();
+
+document.getElementById('requestForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn=e.currentTarget.querySelector('button[type="submit"]');
+  const status=document.getElementById('requestStatus');
+  const service_type=document.getElementById('serviceType').value;
+  const details=document.getElementById('requestDetails').value.trim();
+
+  btn.disabled=true;
+  btn.textContent='جارٍ الإرسال...';
+  status.textContent='';
+
+  try {
+    await api({
+      action:'create_request',
+      access_token:token,
+      user_id:user.id,
+      service_type,
+      details
+    });
+
+    status.textContent='تم إرسال طلبك بنجاح.';
+    document.getElementById('requestDetails').value='';
+    document.getElementById('serviceType').value='';
+
+    const requests=await api({
+      action:'requests',
+      access_token:token
+    });
+    renderRequests(requests);
+  } catch(err) {
+    status.textContent='تعذر إرسال الطلب: '+(err.message||err);
+  } finally {
+    btn.disabled=false;
+    btn.textContent='إرسال الطلب';
+  }
+});
 
 document.getElementById('logout').onclick=()=>{
   localStorage.removeItem('mknon_access_token');
