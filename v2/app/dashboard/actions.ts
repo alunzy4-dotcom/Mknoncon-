@@ -14,30 +14,16 @@ export async function createRequest(formData: FormData) {
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  const userId = claims?.claims?.sub;
-  if (!userId) redirect("/login");
+  if (!claims?.claims?.sub) redirect("/login");
 
-  const { data: requestRow, error } = await supabase
-    .from("requests")
-    .insert({
-      user_id: userId,
-      service_type: serviceType,
-      details
-    })
-    .select("id")
-    .single();
+  const { error } = await supabase.rpc("create_customer_request", {
+    p_service_type: serviceType,
+    p_details: details
+  });
 
-  if (error || !requestRow) {
+  if (error) {
     redirect("/dashboard?error=request_failed");
   }
-
-  await supabase.from("request_events").insert({
-    request_id: requestRow.id,
-    actor_id: userId,
-    event_type: "created",
-    visibility: "customer",
-    message: "تم إنشاء الطلب"
-  });
 
   revalidatePath("/dashboard");
   redirect("/dashboard?message=request_created");
