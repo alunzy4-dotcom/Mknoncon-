@@ -43,6 +43,7 @@ export async function updateRequestStatus(formData: FormData) {
     request_id: requestId,
     actor_id: userId,
     event_type: "status_changed",
+    visibility: "customer",
     message: `تم تغيير الحالة إلى: ${status}`
   });
 
@@ -73,6 +74,7 @@ export async function addAdminNote(formData: FormData) {
     request_id: requestId,
     actor_id: userId,
     event_type: "note",
+    visibility: "internal",
     message: note
   });
 
