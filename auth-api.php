@@ -95,8 +95,28 @@ if ($action === 'profile') {
 if ($action === 'requests') {
   $token = $input['access_token'] ?? '';
   [$status, $data] = supabase_request('GET',
-    '/rest/v1/requests?select=id,service_type,status,created_at&order=created_at.desc',
+    '/rest/v1/requests?select=id,service_type,details,status,created_at&order=created_at.desc',
     null, $token);
+  respond($status ?: 502, $data);
+}
+
+if ($action === 'create_request') {
+  $token = $input['access_token'] ?? '';
+  $userId = $input['user_id'] ?? '';
+  $serviceType = trim($input['service_type'] ?? '');
+  $details = trim($input['details'] ?? '');
+
+  if (!$token || !$userId) respond(401, ['message' => 'Missing session']);
+  if ($serviceType === '') respond(400, ['message' => 'اختر نوع الخدمة']);
+  if ($details === '') respond(400, ['message' => 'اكتب تفاصيل الطلب']);
+
+  [$status, $data] = supabase_request('POST', '/rest/v1/requests', [[
+    'user_id' => $userId,
+    'service_type' => $serviceType,
+    'details' => $details,
+    'status' => 'جديد'
+  ]], $token);
+
   respond($status ?: 502, $data);
 }
 
