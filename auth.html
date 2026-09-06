@@ -1,1 +1,48 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تسجيل الدخول | مكنون كون</title><link rel="stylesheet" href="styles.css"><style>.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:30px}.auth-card{width:min(520px,100%);background:white;border:1px solid var(--line);padding:36px}.auth-head{text-align:center;margin-bottom:24px}.auth-head .mark{margin:auto}.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);margin-bottom:22px}.tabs button{padding:12px;border:0;background:transparent;font-weight:700;cursor:pointer}.tabs button.active{background:var(--ink);color:white}.panel{display:none}.panel.active{display:block}.field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid var(--line);background:#fbfaf7}.auth-card .btn{width:100%;text-align:center;margin-top:8px}.back{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:13px}</style></head><body><main class="auth-wrap"><section class="auth-card"><div class="auth-head"><span class="mark">MK</span><h1>مكنون كون</h1><p>سجّل دخولك أو أنشئ حساباً لمتابعة طلباتك وإحالاتك</p></div><div class="tabs"><button id="loginTab" class="active">تسجيل الدخول</button><button id="signupTab">حساب جديد</button></div><form id="login" class="panel active"><div class="field"><label>البريد الإلكتروني</label><input type="email" placeholder="example@email.com" required></div><div class="field"><label>كلمة المرور</label><input type="password" placeholder="••••••••" required></div><button class="btn" type="submit">تسجيل الدخول</button></form><form id="signup" class="panel"><div class="field"><label>الاسم الكامل</label><input placeholder="اسمك الكامل" required></div><div class="field"><label>رقم الجوال</label><input placeholder="05xxxxxxxx" required></div><div class="field"><label>البريد الإلكتروني</label><input type="email" placeholder="example@email.com" required></div><div class="field"><label>كلمة المرور</label><input type="password" minlength="6" placeholder="6 أحرف على الأقل" required></div><div class="field"><label>كود الإحالة (اختياري)</label><input placeholder="مثال: AB12CD"></div><button class="btn" type="submit">إنشاء الحساب</button></form><a class="back" href="index.html">العودة إلى الصفحة الرئيسية</a></section></main><script>const lt=document.getElementById('loginTab'),st=document.getElementById('signupTab'),lp=document.getElementById('login'),sp=document.getElementById('signup');function showSignup(on){lt.classList.toggle('active',!on);st.classList.toggle('active',on);lp.classList.toggle('active',!on);sp.classList.toggle('active',on)}lt.onclick=()=>showSignup(false);st.onclick=()=>showSignup(true);if(new URLSearchParams(location.search).get('intent')==='signup')showSignup(true);document.querySelectorAll('form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();alert('تم نقل واجهة الصفحة إلى GitHub. سيتم ربط نظام الحسابات بعد إضافة إعدادات قاعدة البيانات الآمنة في Hostinger.')}));</script></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الدخول | مكنون كون</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:30px}.auth-card{width:min(520px,100%);background:white;border:1px solid var(--line);padding:36px}
+.auth-head{text-align:center;margin-bottom:24px}.auth-head .mark{margin:auto}.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);margin-bottom:22px}
+.tabs button{padding:12px;border:0;background:transparent;font-weight:700;cursor:pointer}.tabs button.active{background:var(--ink);color:white}.panel{display:none}.panel.active{display:block}
+.field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid var(--line);background:#fbfaf7}
+.auth-card .btn{width:100%;text-align:center;margin-top:8px}.back,.minor{display:block;text-align:center;margin-top:14px;color:var(--muted);font-size:13px}.minor{border:0;background:transparent;width:100%;cursor:pointer}
+#status{padding:12px;margin:12px 0;border:1px solid var(--line);font-size:13px}#status[data-type="error"]{border-color:#a33}#status[data-type="success"]{border-color:#286b3f}#status[data-type="warning"]{border-color:#b08b45}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+</head>
+<body>
+<main class="auth-wrap"><section class="auth-card">
+<div class="auth-head"><span class="mark">MK</span><h1>مكنون كون</h1><p>سجّل دخولك أو أنشئ حساباً لمتابعة طلباتك وإحالاتك</p></div>
+<div id="status" hidden></div>
+<div class="tabs"><button id="loginTab" class="active" type="button">تسجيل الدخول</button><button id="signupTab" type="button">حساب جديد</button></div>
+
+<form id="login" class="panel active">
+<div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" placeholder="example@email.com" required></div>
+<div class="field"><label>كلمة المرور</label><input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+<button class="btn" type="submit">تسجيل الدخول</button>
+<button id="resetPassword" class="minor" type="button">نسيت كلمة المرور؟</button>
+</form>
+
+<form id="signup" class="panel">
+<div class="field"><label>الاسم الكامل</label><input name="full_name" autocomplete="name" placeholder="اسمك الكامل" required></div>
+<div class="field"><label>رقم الجوال</label><input name="phone" inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx" required></div>
+<div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" placeholder="example@email.com" required></div>
+<div class="field"><label>كلمة المرور</label><input name="password" type="password" minlength="6" autocomplete="new-password" placeholder="6 أحرف على الأقل" required></div>
+<div class="field"><label>كود الإحالة (اختياري)</label><input name="referral_code" placeholder="مثال: AB12CD"></div>
+<button class="btn" type="submit">إنشاء الحساب</button>
+</form>
+<a class="back" href="index.html">العودة إلى الصفحة الرئيسية</a>
+</section></main>
+<script>
+const lt=document.getElementById('loginTab'),st=document.getElementById('signupTab'),lp=document.getElementById('login'),sp=document.getElementById('signup');
+function showSignup(on){lt.classList.toggle('active',!on);st.classList.toggle('active',on);lp.classList.toggle('active',!on);sp.classList.toggle('active',on)}
+lt.onclick=()=>showSignup(false);st.onclick=()=>showSignup(true);
+if(new URLSearchParams(location.search).get('intent')==='signup')showSignup(true);
+</script>
+<script src="auth.js"></script>
+</body></html>
