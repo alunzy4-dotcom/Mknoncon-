@@ -8,37 +8,82 @@
 .wrap{width:min(1000px,92%);margin:40px auto}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
 .panel{background:#fff;border:1px solid var(--line);padding:26px;margin-bottom:18px}.muted{color:var(--muted)}
 .status-chip{display:inline-block;padding:6px 10px;border:1px solid var(--line);font-size:12px}.row{display:flex;gap:12px;flex-wrap:wrap}
+#error{display:none;padding:12px;border:1px solid #a33;margin-bottom:18px}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
 </head>
 <body>
 <main class="wrap">
   <div class="top"><div><p class="eyebrow">لوحة العميل</p><h1>مرحباً بك في مكنون كون</h1></div><button id="logout" class="btn secondary">تسجيل الخروج</button></div>
+  <div id="error"></div>
   <section class="panel"><h2>بيانات الحساب</h2><p id="userInfo" class="muted">جارٍ التحميل...</p></section>
-  <section class="panel"><h2>طلباتي</h2><p class="muted">سيظهر هنا سجل طلباتك وحالتها بعد تفعيل جدول الطلبات.</p><div id="requests"></div></section>
-  <section class="panel"><h2>الإحالات</h2><p class="muted">سيظهر هنا كود الإحالة وعدد المسجلين من خلاله.</p><div id="referral"></div></section>
+  <section class="panel"><h2>طلباتي</h2><p class="muted">سيظهر هنا سجل طلباتك وحالتها.</p><div id="requests"></div></section>
+  <section class="panel"><h2>الإحالات</h2><p class="muted">سيظهر هنا كود الإحالة الخاص بك.</p><div id="referral"></div></section>
 </main>
 <script>
-const cfg=window.MKNON_SUPABASE||{};
-if(!cfg.url||!cfg.anonKey){document.getElementById('userInfo').textContent='إعداد Supabase لم يكتمل بعد.';}
-else{
- const client=supabase.createClient(cfg.url,cfg.anonKey);
- client.auth.getUser().then(async({data,error})=>{
-   if(error||!data?.user){location.href='auth.html';return;}
-   const u=data.user;
-   document.getElementById('userInfo').textContent=u.email||'تم تسجيل الدخول';
-   const {data:profile}=await client.from('profiles').select('full_name,phone,referral_code').eq('id',u.id).maybeSingle();
-   if(profile){
-      document.getElementById('userInfo').textContent=[profile.full_name,profile.phone,u.email].filter(Boolean).join(' — ');
-      document.getElementById('referral').innerHTML='<span class="status-chip">كود الإحالة: '+(profile.referral_code||'غير متاح')+'</span>';
-   }
-   const {data:requests}=await client.from('requests').select('id,service_type,status,created_at').order('created_at',{ascending:false});
-   if(requests?.length){
-     document.getElementById('requests').innerHTML=requests.map(r=>'<div class="panel"><strong>'+(r.service_type||'طلب')+'</strong><div class="muted">'+(r.status||'جديد')+'</div></div>').join('');
-   }
- });
- document.getElementById('logout').onclick=async()=>{await client.auth.signOut();location.href='auth.html';};
+const token = localStorage.getItem('mknon_access_token');
+const rawUser = localStorage.getItem('mknon_user');
+let user = null;
+try { user = rawUser ? JSON.parse(rawUser) : null; } catch (_) {}
+
+if (!token || !user?.id) {
+  location.href = 'auth.html';
 }
+
+async function api(payload) {
+  const res = await fetch('auth-api.php', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    cache:'no-store',
+    body:JSON.stringify(payload)
+  });
+  let data = {};
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) throw new Error(data.msg || data.message || data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function showError(message) {
+  const box=document.getElementById('error');
+  box.style.display='block';
+  box.textContent=message;
+}
+
+(async()=>{
+  try {
+    document.getElementById('userInfo').textContent = user.email || 'تم تسجيل الدخول';
+
+    const profile = await api({
+      action:'profile',
+      access_token:token,
+      user_id:user.id
+    });
+
+    if (Array.isArray(profile) && profile[0]) {
+      const p=profile[0];
+      document.getElementById('userInfo').textContent=[p.full_name,p.phone,user.email].filter(Boolean).join(' — ');
+      document.getElementById('referral').innerHTML='<span class="status-chip">كود الإحالة: '+(p.referral_code||'غير متاح')+'</span>';
+    }
+
+    const requests = await api({
+      action:'requests',
+      access_token:token
+    });
+
+    if (Array.isArray(requests) && requests.length) {
+      document.getElementById('requests').innerHTML=requests.map(r =>
+        '<div class="panel"><strong>'+(r.service_type||'طلب')+'</strong><div class="muted">'+(r.status||'جديد')+'</div></div>'
+      ).join('');
+    }
+  } catch (err) {
+    showError('تعذر تحميل بيانات الحساب: ' + (err.message || err));
+  }
+})();
+
+document.getElementById('logout').onclick=()=>{
+  localStorage.removeItem('mknon_access_token');
+  localStorage.removeItem('mknon_refresh_token');
+  localStorage.removeItem('mknon_user');
+  location.href='auth.html';
+};
 </script>
 </body></html>
