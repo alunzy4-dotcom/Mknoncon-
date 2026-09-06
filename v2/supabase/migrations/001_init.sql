@@ -16,7 +16,7 @@ create table public.admin_users (
 
 create table public.requests (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   service_type text not null,
   details text not null,
   status text not null default 'جديد'
@@ -57,6 +57,11 @@ alter table public.profiles enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.requests enable row level security;
 alter table public.request_events enable row level security;
+
+create policy "admin_users_select_self"
+on public.admin_users for select
+to authenticated
+using ((select auth.uid()) = user_id);
 
 create policy "profiles_select_own_or_admin"
 on public.profiles for select
