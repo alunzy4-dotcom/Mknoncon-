@@ -30,6 +30,8 @@ create table public.request_events (
   request_id uuid not null references public.requests(id) on delete cascade,
   actor_id uuid not null references auth.users(id) on delete cascade,
   event_type text not null check (event_type in ('created','status_changed','note')),
+  visibility text not null default 'customer'
+    check (visibility in ('customer','internal')),
   message text,
   created_at timestamptz not null default now()
 );
@@ -94,9 +96,12 @@ on public.request_events for select
 to authenticated
 using (
   public.is_admin()
-  or exists (
-    select 1 from public.requests r
-    where r.id = request_id and r.user_id = (select auth.uid())
+  or (
+    visibility = 'customer'
+    and exists (
+      select 1 from public.requests r
+      where r.id = request_id and r.user_id = (select auth.uid())
+    )
   )
 );
 
