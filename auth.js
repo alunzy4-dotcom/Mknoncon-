@@ -44,8 +44,17 @@ function saveSession(data) {
   return true;
 }
 
-if (localStorage.getItem('mknon_access_token')) {
-  location.href = 'dashboard.html';
+const existingToken = localStorage.getItem('mknon_access_token');
+const existingUserRaw = localStorage.getItem('mknon_user');
+let existingUser = null;
+try { existingUser = existingUserRaw ? JSON.parse(existingUserRaw) : null; } catch (_) {}
+
+if (existingToken && existingUser?.id) {
+  location.replace('dashboard.html');
+} else if (existingToken || existingUserRaw) {
+  localStorage.removeItem('mknon_access_token');
+  localStorage.removeItem('mknon_refresh_token');
+  localStorage.removeItem('mknon_user');
 }
 
 loginForm.addEventListener('submit', async (e) => {
