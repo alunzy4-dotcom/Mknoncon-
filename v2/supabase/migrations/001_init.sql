@@ -124,3 +124,120 @@ with check (public.is_admin() and actor_id = (select auth.uid()));
 
 -- لا يوجد trigger على auth.users.
 -- إنشاء profile يتم من خادم التطبيق بعد نجاح المصادقة.
+
+
+-- عمليات ذرّية لضمان عدم حدوث حفظ جزئي للطلب أو تحديثاته.
+create or replace function public.create_customer_request(
+  p_service_type text,
+  p_details text
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_request_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  if length(trim(coalesce(p_service_type, ''))) = 0 then
+    raise exception 'invalid_service_type';
+  end if;
+
+  if length(trim(coalesce(p_details, ''))) < 5 then
+    raise exception 'invalid_details';
+  end if;
+
+  insert into public.requests (user_id, service_type, details)
+  values (v_user_id, trim(p_service_type), trim(p_details))
+  returning id into v_request_id;
+
+  insert into public.request_events (
+    request_id, actor_id, event_type, visibility, message
+  )
+  values (
+    v_request_id, v_user_id, 'created', 'customer', 'تم إنشاء الطلب'
+  );
+
+  return v_request_id;
+end;
+$$;
+
+create or replace function public.admin_update_request_status(
+  p_request_id uuid,
+  p_status text
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null or not public.is_admin() then
+    raise exception 'forbidden';
+  end if;
+
+  if p_status not in ('جديد','قيد المراجعة','بانتظار العميل','قيد التنفيذ','مكتمل','ملغي') then
+    raise exception 'invalid_status';
+  end if;
+
+  update public.requests
+  set status = p_status, updated_at = now()
+  where id = p_request_id;
+
+  if not found then
+    raise exception 'request_not_found';
+  end if;
+
+  insert into public.request_events (
+    request_id, actor_id, event_type, visibility, message
+  )
+  values (
+    p_request_id, v_user_id, 'status_changed', 'customer',
+    'تم تغيير الحالة إلى: ' || p_status
+  );
+end;
+$$;
+
+create or replace function public.admin_add_request_note(
+  p_request_id uuid,
+  p_note text
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null or not public.is_admin() then
+    raise exception 'forbidden';
+  end if;
+
+  if length(trim(coalesce(p_note, ''))) < 2 then
+    raise exception 'invalid_note';
+  end if;
+
+  if not exists (select 1 from public.requests where id = p_request_id) then
+    raise exception 'request_not_found';
+  end if;
+
+  insert into public.request_events (
+    request_id, actor_id, event_type, visibility, message
+  )
+  values (
+    p_request_id, v_user_id, 'note', 'internal', trim(p_note)
+  );
+end;
+$$;
+
+grant execute on function public.create_customer_request(text, text) to authenticated;
+grant execute on function public.admin_update_request_status(uuid, text) to authenticated;
+grant execute on function public.admin_add_request_note(uuid, text) to authenticated;
