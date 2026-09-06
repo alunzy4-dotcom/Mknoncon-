@@ -35,6 +35,7 @@ export async function createRequest(formData: FormData) {
     request_id: requestRow.id,
     actor_id: userId,
     event_type: "created",
+    visibility: "customer",
     message: "تم إنشاء الطلب"
   });
 
