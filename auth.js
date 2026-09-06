@@ -59,7 +59,11 @@ if (!cfg.url || !cfg.anonKey) {
     if (data?.session) {
       location.href = 'dashboard.html';
     } else {
-      setStatus('تم إنشاء الحساب. افتح بريدك الإلكتروني وأكّد التسجيل ثم سجّل الدخول.', 'success');
+      if (typeof showSignup === 'function') showSignup(false);
+      loginForm.email.value = email;
+      loginForm.password.value = '';
+      setStatus('تم إنشاء الحساب. افتح بريدك الإلكتروني وأكّد التسجيل، ثم ارجع هنا واضغط تسجيل الدخول.', 'success');
+      loginForm.password.focus();
     }
   });
 
