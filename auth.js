@@ -75,6 +75,20 @@ if (!cfg.url || !cfg.anonKey) {
     }
 
     if (data?.session) {
+      const user = data.user;
+      if (user) {
+        const { error: profileError } = await client.from('profiles').upsert({
+          id: user.id,
+          full_name,
+          phone,
+          referral_code: user.id.replace(/-/g,'').slice(0,8).toUpperCase(),
+          referred_by: referral_code
+        }, { onConflict: 'id' });
+        if (profileError) {
+          signupStatus.textContent = 'تم إنشاء الحساب، لكن تعذر حفظ الملف الشخصي: ' + profileError.message;
+          return;
+        }
+      }
       location.href = 'dashboard.html';
       return;
     }
@@ -84,6 +98,17 @@ if (!cfg.url || !cfg.anonKey) {
     const { error: loginError } = await client.auth.signInWithPassword({ email, password });
 
     if (!loginError) {
+      const { data: current } = await client.auth.getUser();
+      const user = current?.user;
+      if (user) {
+        await client.from('profiles').upsert({
+          id: user.id,
+          full_name,
+          phone,
+          referral_code: user.id.replace(/-/g,'').slice(0,8).toUpperCase(),
+          referred_by: referral_code
+        }, { onConflict: 'id' });
+      }
       location.href = 'dashboard.html';
       return;
     }
