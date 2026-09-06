@@ -3,6 +3,7 @@ const statusBox = document.getElementById('status');
 const loginForm = document.getElementById('login');
 const signupForm = document.getElementById('signup');
 const resetBtn = document.getElementById('resetPassword');
+const signupStatus = document.getElementById('signupStatus');
 
 function setStatus(message, type='info') {
   statusBox.textContent = message || '';
@@ -45,7 +46,11 @@ if (!cfg.url || !cfg.anonKey) {
 
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    setStatus('جارٍ إنشاء الحساب...');
+
+    const submitBtn = signupForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'جارٍ إنشاء الحساب...';
+    signupStatus.textContent = '';
 
     const full_name = signupForm.full_name.value.trim();
     const phone = normalizePhone(signupForm.phone.value);
@@ -62,15 +67,37 @@ if (!cfg.url || !cfg.anonKey) {
       }
     });
 
-    if (error) return setStatus(error.message, 'error');
+    if (error) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'إنشاء الحساب';
+      signupStatus.textContent = error.message;
+      return;
+    }
 
-    // ملف العميل يُنشأ تلقائياً بواسطة trigger في Supabase.
     if (data?.session) {
       location.href = 'dashboard.html';
+      return;
+    }
+
+    // إذا كان تأكيد البريد متوقفاً أو كان الحساب موجوداً مسبقاً بنفس كلمة المرور،
+    // نحاول تسجيل الدخول مباشرة.
+    const { error: loginError } = await client.auth.signInWithPassword({ email, password });
+
+    if (!loginError) {
+      location.href = 'dashboard.html';
+      return;
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إنشاء الحساب';
+
+    const msg = (loginError.message || '').toLowerCase();
+    if (msg.includes('email not confirmed')) {
+      signupStatus.textContent = 'الحساب موجود لكن البريد ما زال يحتاج تأكيداً. تأكد أن خيار Confirm email متوقف في Supabase ثم جرّب بحساب جديد أو احذف الحساب التجريبي القديم.';
+    } else if (msg.includes('invalid login credentials')) {
+      signupStatus.textContent = 'هذا البريد مسجل مسبقاً أو كلمة المرور لا تطابق الحساب السابق. جرّب تسجيل الدخول أو استخدم بريداً جديداً للاختبار.';
     } else {
-      setStatus('تم إنشاء حسابك بنجاح. لا تحتاج لإعادة تسجيل الدخول الآن. افتح رسالة التأكيد في بريدك الإلكتروني واضغط رابط التأكيد، وبعدها سيعيدك الموقع ويدخلك تلقائياً إلى لوحة العميل.', 'success');
-      signupForm.querySelector('button[type="submit"]').disabled = true;
-      signupForm.querySelector('button[type="submit"]').textContent = 'بانتظار تأكيد البريد';
+      signupStatus.textContent = loginError.message || 'تعذر إكمال التسجيل.';
     }
   });
 
