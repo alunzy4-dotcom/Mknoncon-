@@ -15,7 +15,7 @@
 </head>
 <body>
 <main class="wrap">
-  <div class="top"><div><p class="eyebrow">لوحة العميل</p><h1>مرحباً بك في مكنون كون</h1></div><button id="logout" class="btn secondary">تسجيل الخروج</button></div>
+  <div class="top"><div><p class="eyebrow">لوحة العميل</p><h1>مرحباً بك في مكنون كون</h1></div><div><a id="loginBtn" class="btn" href="auth.html" style="display:none">تسجيل الدخول</a><button id="logout" class="btn secondary">تسجيل الخروج</button></div></div>
   <div id="error"></div>
   <section class="panel"><h2>بيانات الحساب</h2><p id="userInfo" class="muted">جارٍ التحميل...</p></section>
   <section class="panel">
@@ -94,8 +94,10 @@ function renderRequests(requests) {
 }
 
 if (sessionMissing) {
-  document.getElementById('userInfo').innerHTML = 'انتهت جلسة الدخول. <a href="auth.html" style="text-decoration:underline">اضغط هنا لتسجيل الدخول</a>';
-  document.getElementById('requestForm').style.display='none';
+  document.getElementById('logout').style.display='none';
+  document.getElementById('loginBtn').style.display='inline-block';
+  document.getElementById('userInfo').innerHTML = 'انتهت جلسة الدخول. استخدم زر تسجيل الدخول بالأعلى.';
+  document.getElementById('requestForm').closest('.panel').style.display='none';
   document.getElementById('requests').innerHTML='<p class="muted">سجّل الدخول لعرض طلباتك.</p>';
 } else (async()=>{
   try {
