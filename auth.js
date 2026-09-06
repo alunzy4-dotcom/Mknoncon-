@@ -30,7 +30,16 @@ if (!cfg.url || !cfg.anonKey) {
     const password = loginForm.password.value;
 
     const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) return setStatus(error.message, 'error');
+    if (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('email not confirmed')) {
+        return setStatus('البريد الإلكتروني غير مؤكد بعد. افتح رسالة Supabase في بريدك واضغط رابط التأكيد، ثم ارجع وسجّل الدخول.', 'warning');
+      }
+      if (msg.includes('invalid login credentials')) {
+        return setStatus('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'error');
+      }
+      return setStatus(error.message, 'error');
+    }
     location.href = 'dashboard.html';
   });
 
