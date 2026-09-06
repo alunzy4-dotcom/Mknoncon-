@@ -52,7 +52,10 @@ let user = null;
 try { user = rawUser ? JSON.parse(rawUser) : null; } catch (_) {}
 
 if (!token || !user?.id) {
-  location.href = 'auth.html';
+  localStorage.removeItem('mknon_access_token');
+  localStorage.removeItem('mknon_refresh_token');
+  localStorage.removeItem('mknon_user');
+  location.replace('auth.html');
 }
 
 async function api(payload) {
