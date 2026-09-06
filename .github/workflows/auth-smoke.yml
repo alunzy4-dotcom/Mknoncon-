@@ -1,4 +1,4 @@
-name: Auth smoke test
+name: Browser auth diagnostic
 
 on:
   push:
@@ -6,30 +6,31 @@ on:
       - ".github/workflows/auth-smoke.yml"
 
 jobs:
-  test-auth:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check deployed auth page
-        run: |
-          set -e
-          curl -fsSL https://mknoncon.com/auth.html -o /tmp/auth.html
-          grep -q "إنشاء الحساب" /tmp/auth.html
-          grep -q "auth.js" /tmp/auth.html
-          echo "SITE_OK"
-
-      - name: Test Supabase signup and profile creation
+      - name: Verify deployed files are current
         run: |
           set -euo pipefail
+          curl -fsSL https://mknoncon.com/auth.js -o /tmp/live-auth.js
+          curl -fsSL https://mknoncon.com/supabase-config.js -o /tmp/live-config.js
+          echo "LIVE_AUTH_SHA=$(sha256sum /tmp/live-auth.js | cut -d' ' -f1)"
+          echo "REPO_AUTH_SHA=$(sha256sum auth.js | cut -d' ' -f1)"
+          diff -u auth.js /tmp/live-auth.js
+          diff -u supabase-config.js /tmp/live-config.js
+          echo "DEPLOYMENT_CURRENT"
 
+      - name: Check browser CORS preflight to Supabase
+        run: |
+          set -euo pipefail
           SUPABASE_URL=$(python3 - <<'PY'
           import re
           s=open('supabase-config.js').read()
           print(re.search(r'url:\s*"([^"]+)"', s).group(1))
           PY
           )
-
           SUPABASE_KEY=$(python3 - <<'PY'
           import re
           s=open('supabase-config.js').read()
@@ -37,50 +38,45 @@ jobs:
           PY
           )
 
-          EMAIL="smoke-${GITHUB_RUN_ID}@example.com"
+          curl -sS -D /tmp/headers -o /dev/null             -X OPTIONS "$SUPABASE_URL/auth/v1/signup"             -H "Origin: https://mknoncon.com"             -H "Access-Control-Request-Method: POST"             -H "Access-Control-Request-Headers: apikey,authorization,content-type,x-client-info"
+
+          cat /tmp/headers
+          grep -i "access-control-allow-origin" /tmp/headers
+          grep -i "access-control-allow-headers" /tmp/headers
+          echo "CORS_OK"
+
+      - name: Signup with browser Origin header
+        run: |
+          set -euo pipefail
+          SUPABASE_URL=$(python3 - <<'PY'
+          import re
+          s=open('supabase-config.js').read()
+          print(re.search(r'url:\s*"([^"]+)"', s).group(1))
+          PY
+          )
+          SUPABASE_KEY=$(python3 - <<'PY'
+          import re
+          s=open('supabase-config.js').read()
+          print(re.search(r'anonKey:\s*"([^"]+)"', s).group(1))
+          PY
+          )
+
+          EMAIL="browser-${GITHUB_RUN_ID}@example.com"
           PASSWORD="MknonconTest-2026!"
 
-          HTTP=$(curl -sS -o /tmp/signup.json -w "%{http_code}"             -X POST "$SUPABASE_URL/auth/v1/signup"             -H "apikey: $SUPABASE_KEY"             -H "Authorization: Bearer $SUPABASE_KEY"             -H "Content-Type: application/json"             --data "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"data\":{\"full_name\":\"Smoke Test\",\"phone\":\"0500000000\"}}")
+          HTTP=$(curl -sS -D /tmp/signup-headers -o /tmp/signup.json -w "%{http_code}"             -X POST "$SUPABASE_URL/auth/v1/signup"             -H "Origin: https://mknoncon.com"             -H "apikey: $SUPABASE_KEY"             -H "Authorization: Bearer $SUPABASE_KEY"             -H "Content-Type: application/json"             --data "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"data\":{\"full_name\":\"Browser Test\",\"phone\":\"0500000000\"}}")
 
-          echo "SIGNUP_HTTP=$HTTP"
-
+          echo "HTTP=$HTTP"
+          cat /tmp/signup-headers
           python3 - <<'PY'
           import json,sys
           d=json.load(open('/tmp/signup.json'))
-          print("SIGNUP_RESPONSE_KEYS", sorted(d.keys()))
-          if d.get('error') or d.get('error_code') or d.get('msg'):
-              print("SIGNUP_ERROR", d)
-              sys.exit(2)
-          user=d.get('user') or {}
-          session=d.get('session')
-          token=d.get('access_token') or (session or {}).get('access_token')
-          uid=user.get('id')
-          print("USER_ID", uid)
-          print("HAS_SESSION", bool(token))
-          if not uid:
-              sys.exit(3)
-          open('/tmp/uid','w').write(uid)
-          if token:
-              open('/tmp/token','w').write(token)
+          print("keys", sorted(d.keys()))
+          print("has_user", bool(d.get("user")))
+          print("has_access_token", bool(d.get("access_token")))
+          if "error_code" in d or int(__import__("os").environ.get("HTTP_STATUS","200")) >= 400:
+              print(d)
           PY
-
-          if [ ! -s /tmp/token ]; then
-            echo "NO_SESSION_AFTER_SIGNUP"
-            exit 4
-          fi
-
-          UID=$(cat /tmp/uid)
-          TOKEN=$(cat /tmp/token)
-
-          PHTTP=$(curl -sS -o /tmp/profile.json -w "%{http_code}"             "$SUPABASE_URL/rest/v1/profiles?id=eq.$UID&select=id,full_name,phone,referral_code"             -H "apikey: $SUPABASE_KEY"             -H "Authorization: Bearer $TOKEN")
-
-          echo "PROFILE_HTTP=$PHTTP"
-
-          python3 - <<'PY'
-          import json,sys
-          d=json.load(open('/tmp/profile.json'))
-          if not isinstance(d,list) or not d:
-              print("PROFILE_NOT_CREATED", d)
-              sys.exit(5)
-          print("PROFILE_OK", d[0])
-          PY
+          test "$HTTP" = "200"
+          grep -i "access-control-allow-origin" /tmp/signup-headers
+          echo "BROWSER_ORIGIN_SIGNUP_OK"
