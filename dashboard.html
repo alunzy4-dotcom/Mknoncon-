@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة العميل | مكنون كون</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.wrap{width:min(1000px,92%);margin:40px auto}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.panel{background:#fff;border:1px solid var(--line);padding:26px;margin-bottom:18px}.muted{color:var(--muted)}
+.status-chip{display:inline-block;padding:6px 10px;border:1px solid var(--line);font-size:12px}.row{display:flex;gap:12px;flex-wrap:wrap}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="top"><div><p class="eyebrow">لوحة العميل</p><h1>مرحباً بك في مكنون كون</h1></div><button id="logout" class="btn secondary">تسجيل الخروج</button></div>
+  <section class="panel"><h2>بيانات الحساب</h2><p id="userInfo" class="muted">جارٍ التحميل...</p></section>
+  <section class="panel"><h2>طلباتي</h2><p class="muted">سيظهر هنا سجل طلباتك وحالتها بعد تفعيل جدول الطلبات.</p><div id="requests"></div></section>
+  <section class="panel"><h2>الإحالات</h2><p class="muted">سيظهر هنا كود الإحالة وعدد المسجلين من خلاله.</p><div id="referral"></div></section>
+</main>
+<script>
+const cfg=window.MKNON_SUPABASE||{};
+if(!cfg.url||!cfg.anonKey){document.getElementById('userInfo').textContent='إعداد Supabase لم يكتمل بعد.';}
+else{
+ const client=supabase.createClient(cfg.url,cfg.anonKey);
+ client.auth.getUser().then(async({data,error})=>{
+   if(error||!data?.user){location.href='auth.html';return;}
+   const u=data.user;
+   document.getElementById('userInfo').textContent=u.email||'تم تسجيل الدخول';
+   const {data:profile}=await client.from('profiles').select('full_name,phone,referral_code').eq('id',u.id).maybeSingle();
+   if(profile){
+      document.getElementById('userInfo').textContent=[profile.full_name,profile.phone,u.email].filter(Boolean).join(' — ');
+      document.getElementById('referral').innerHTML='<span class="status-chip">كود الإحالة: '+(profile.referral_code||'غير متاح')+'</span>';
+   }
+   const {data:requests}=await client.from('requests').select('id,service_type,status,created_at').order('created_at',{ascending:false});
+   if(requests?.length){
+     document.getElementById('requests').innerHTML=requests.map(r=>'<div class="panel"><strong>'+(r.service_type||'طلب')+'</strong><div class="muted">'+(r.status||'جديد')+'</div></div>').join('');
+   }
+ });
+ document.getElementById('logout').onclick=async()=>{await client.auth.signOut();location.href='auth.html';};
+}
+</script>
+</body></html>
