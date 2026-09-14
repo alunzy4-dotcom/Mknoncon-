@@ -1,18 +1,31 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "../actions";
-import { addAdminNote, updateRequestStatus } from "./actions";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+type Customer = {
+  id: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  referral_code: string;
+  referred_by: string | null;
+  source: string;
+  created_at: string;
+};
+
 export const dynamic = "force-dynamic";
+
+function normalize(value: string) {
+  return value.trim().toLocaleLowerCase("ar");
+}
 
 export default async function AdminPage({ searchParams }: Props) {
   const params = await searchParams;
-  const message = typeof params.message === "string" ? params.message : "";
-  const error = typeof params.error === "string" ? params.error : "";
+  const q = typeof params.q === "string" ? params.q.trim() : "";
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -27,65 +40,108 @@ export default async function AdminPage({ searchParams }: Props) {
 
   if (!admin) redirect("/dashboard");
 
-  const { data: requests } = await supabase
-    .from("requests")
-    .select("id,user_id,service_type,details,status,created_at,updated_at,profiles(full_name,phone)")
+  const { data: customersData } = await supabase
+    .from("profiles")
+    .select("id,full_name,phone,email,referral_code,referred_by,source,created_at")
     .order("created_at", { ascending: false });
+
+  const customers = (customersData ?? []) as Customer[];
+  const query = normalize(q);
+  const filteredCustomers = query
+    ? customers.filter((customer) =>
+        [
+          customer.full_name,
+          customer.phone,
+          customer.email,
+          customer.referral_code,
+          customer.referred_by ?? ""
+        ].some((value) => normalize(value).includes(query))
+      )
+    : customers;
+
+  const referredCustomers = customers.filter((customer) => customer.referred_by).length;
+  const websiteCustomers = customers.filter((customer) => customer.source === "الموقع").length;
 
   return (
     <main className="container section">
       <div className="top">
         <div>
           <p className="eyebrow">الإدارة</p>
-          <h1>إدارة طلبات مكنون كون</h1>
+          <h1>لوحة إدارة مكنون كون</h1>
+          <p className="muted">إدارة العملاء المسجلين في الموقع، بينما تعبئة الطلبات تتم عبر Tally.</p>
         </div>
         <form action={signOut}><button className="btn alt" type="submit">تسجيل الخروج</button></form>
       </div>
 
-      {message && <div className="notice">تم تنفيذ العملية بنجاح.</div>}
-      {error && <div className="notice">تعذر تنفيذ العملية. راجع البيانات وحاول مرة أخرى.</div>}
+      <div className="grid cards">
+        <article className="card">
+          <p className="muted">إجمالي العملاء</p>
+          <h2>{customers.length}</h2>
+        </article>
+        <article className="card">
+          <p className="muted">مسجلون من الموقع</p>
+          <h2>{websiteCustomers}</h2>
+        </article>
+        <article className="card">
+          <p className="muted">عملاء بالإحالة</p>
+          <h2>{referredCustomers}</h2>
+        </article>
+      </div>
 
-      {!requests?.length ? (
-        <section className="panel"><p className="muted">لا توجد طلبات حتى الآن.</p></section>
-      ) : requests.map((r: any) => (
-        <section className="panel" key={r.id}>
-          <div className="top">
-            <div>
-              <h2>{r.service_type}</h2>
-              <p className="muted">{r.profiles?.full_name || "عميل"} — {r.profiles?.phone || "بدون جوال"}</p>
-            </div>
-            <span className="status">{r.status}</span>
+      <section className="panel" style={{ marginTop: 24 }}>
+        <div className="top">
+          <div>
+            <p className="eyebrow">العملاء</p>
+            <h2>سجل العملاء</h2>
           </div>
+          <span className="status">{filteredCustomers.length} عميل</span>
+        </div>
 
-          <p>{r.details}</p>
-          <small className="muted">{new Date(r.created_at).toLocaleString("ar-SA")}</small>
+        <form method="get" style={{ margin: "18px 0" }}>
+          <div className="field">
+            <label htmlFor="q">بحث</label>
+            <input
+              id="q"
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="الاسم أو الجوال أو البريد أو كود الإحالة"
+            />
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="btn" type="submit">بحث</button>
+            {q && <a className="btn alt" href="/admin">إلغاء البحث</a>}
+          </div>
+        </form>
 
-          <form action={updateRequestStatus} style={{ marginTop: 16 }}>
-            <input type="hidden" name="request_id" value={r.id} />
-            <div className="field">
-              <label>تغيير الحالة</label>
-              <select name="status" defaultValue={r.status}>
-                <option>جديد</option>
-                <option>قيد المراجعة</option>
-                <option>بانتظار العميل</option>
-                <option>قيد التنفيذ</option>
-                <option>مكتمل</option>
-                <option>ملغي</option>
-              </select>
-            </div>
-            <button className="btn" type="submit">حفظ الحالة</button>
-          </form>
+        {!filteredCustomers.length ? (
+          <p className="muted">{q ? "لا توجد نتائج مطابقة للبحث." : "لا يوجد عملاء مسجلون حتى الآن."}</p>
+        ) : (
+          <div className="grid">
+            {filteredCustomers.map((customer) => (
+              <article className="card" key={customer.id}>
+                <div className="top">
+                  <div>
+                    <h3>{customer.full_name || "بدون اسم"}</h3>
+                    <p className="muted" dir="ltr">{customer.email || "بدون بريد"}</p>
+                  </div>
+                  <span className="status">{customer.source || "الموقع"}</span>
+                </div>
+                <p><strong>الجوال:</strong> <span dir="ltr">{customer.phone || "—"}</span></p>
+                <p><strong>كود الإحالة:</strong> <span dir="ltr">{customer.referral_code || "—"}</span></p>
+                <p><strong>المُحيل:</strong> <span dir="ltr">{customer.referred_by || "—"}</span></p>
+                <small className="muted">تاريخ التسجيل: {new Date(customer.created_at).toLocaleDateString("ar-SA")}</small>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
-          <form action={addAdminNote} style={{ marginTop: 16 }}>
-            <input type="hidden" name="request_id" value={r.id} />
-            <div className="field">
-              <label>ملاحظة إدارية</label>
-              <textarea name="note" placeholder="اكتب ملاحظة مرتبطة بالطلب..." required />
-            </div>
-            <button className="btn alt" type="submit">إضافة ملاحظة</button>
-          </form>
-        </section>
-      ))}
+      <section className="panel" style={{ marginTop: 24 }}>
+        <p className="eyebrow">الطلبات</p>
+        <h2>طلبات الخدمات عبر Tally</h2>
+        <p className="muted">العميل يختار الخدمة من لوحة حسابه ثم يكمل نموذج الطلب في Tally. الربط التلقائي لنتائج Tally داخل لوحة الإدارة سيكون خطوة مستقلة.</p>
+      </section>
     </main>
   );
 }
