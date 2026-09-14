@@ -20,6 +20,9 @@ create table if not exists public.salary_expenses (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists salary_budgets_user_month_idx on public.salary_budgets(user_id, month desc);
+create index if not exists salary_expenses_budget_idx on public.salary_expenses(budget_id, created_at asc);
+
 alter table public.salary_budgets enable row level security;
 alter table public.salary_expenses enable row level security;
 
@@ -32,6 +35,6 @@ create policy "salary_budgets_own_update" on public.salary_budgets for update to
 create policy "salary_budgets_own_delete" on public.salary_budgets for delete to authenticated using ((select auth.uid()) = user_id);
 
 create policy "salary_expenses_own_select" on public.salary_expenses for select to authenticated using ((select auth.uid()) = user_id);
-create policy "salary_expenses_own_insert" on public.salary_expenses for insert to authenticated with check ((select auth.uid()) = user_id);
-create policy "salary_expenses_own_update" on public.salary_expenses for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "salary_expenses_own_insert" on public.salary_expenses for insert to authenticated with check ((select auth.uid()) = user_id and exists (select 1 from public.salary_budgets b where b.id = budget_id and b.user_id = (select auth.uid())));
+create policy "salary_expenses_own_update" on public.salary_expenses for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id and exists (select 1 from public.salary_budgets b where b.id = budget_id and b.user_id = (select auth.uid())));
 create policy "salary_expenses_own_delete" on public.salary_expenses for delete to authenticated using ((select auth.uid()) = user_id);
