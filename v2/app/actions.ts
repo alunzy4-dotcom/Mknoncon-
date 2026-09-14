@@ -25,7 +25,15 @@ export async function signIn(formData: FormData) {
     redirect(`/login?error=profile_setup&next=${encodeURIComponent(next)}`);
   }
 
-  redirect(next);
+  if (next !== "/dashboard") redirect(next);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  redirect(profile?.role === "admin" ? "/admin" : "/dashboard");
 }
 
 export async function signUp(formData: FormData) {
@@ -50,7 +58,8 @@ export async function signUp(formData: FormData) {
       data: {
         full_name: fullName,
         phone,
-        referral_code: referralCode || null
+        referral_code: referralCode || null,
+        source: "الموقع"
       }
     }
   });
