@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+const consultationUrl = "https://tally.so/r/kdoLl1";
+
 export default function Home() {
   return (
     <>
@@ -11,11 +13,12 @@ export default function Home() {
           </Link>
           <div className="links">
             <Link href="#services">الخدمات</Link>{" "}
-            <Link href="#tools">الأدوات</Link>
+            <Link href="#tools">الأدوات</Link>{" "}
+            <a href={consultationUrl} target="_blank" rel="noopener noreferrer">اطلب استشارة/خدمة</a>
           </div>
           <div>
             <Link className="btn alt" href="/login">تسجيل الدخول</Link>{" "}
-            <Link className="btn" href="/login?mode=signup">إنشاء حساب</Link>
+            <a className="btn" href={consultationUrl} target="_blank" rel="noopener noreferrer">اطلب خدمة</a>
           </div>
         </div>
       </header>
@@ -29,7 +32,8 @@ export default function Home() {
               استشارات وحلول تنفيذية للأفراد والمنشآت، مع حساب عميل آمن يتيح تقديم الطلبات ومتابعتها من مكان واحد.
             </p>
             <p>
-              <Link className="btn" href="/dashboard/mortgage">حاسبة الاستقطاع والتمويل العقاري</Link>{" "}
+              <a className="btn" href={consultationUrl} target="_blank" rel="noopener noreferrer">اطلب استشارة/خدمة</a>{" "}
+              <Link className="btn alt" href="/dashboard/mortgage">حاسبة الاستقطاع والتمويل العقاري</Link>{" "}
               <Link className="btn alt" href="/login?mode=signup">إنشاء حساب</Link>
             </p>
           </div>
@@ -69,7 +73,7 @@ export default function Home() {
               <article className="card"><h3>الخدمات العقارية</h3><p className="muted">دعم القرارات العقارية والتقييم والمتابعة.</p></article>
               <article className="card"><h3>الخدمات الحكومية</h3><p className="muted">متابعة التراخيص والمعاملات الرسمية.</p></article>
               <article className="card"><h3>الحلول الرقمية</h3><p className="muted">مواقع، أتمتة، ذكاء اصطناعي وتكاملات.</p></article>
-              <article className="card"><h3>خدمات مخصصة</h3><p className="muted">طلبات خاصة تُقيّم وتُسند للمختص المناسب.</p></article>
+              <article className="card"><h3>خدمات مخصصة</h3><p className="muted">طلبات خاصة تُقيّم وتُسند للمختص المناسب.</p><p><a className="btn alt" href={consultationUrl} target="_blank" rel="noopener noreferrer">تقديم طلب</a></p></article>
             </div>
           </div>
         </section>
