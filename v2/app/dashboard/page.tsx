@@ -84,13 +84,11 @@ export default async function DashboardPage({ searchParams }: Props) {
         <h2>اختر الخدمة التي تحتاجها</h2>
         <p className="muted">بعد اختيار الخدمة سيفتح نموذج مكنون كون في Tally لإكمال تفاصيل الطلب.</p>
 
-        <div className="service-grid">
+        <div className="grid cards">
           {services.map((service) => (
-            <article className="service-card" key={service.name}>
-              <div>
-                <h3>{service.name}</h3>
-                <p>{service.description}</p>
-              </div>
+            <article className="card" key={service.name}>
+              <h3>{service.name}</h3>
+              <p className="muted">{service.description}</p>
               <a className="btn" href={tallyUrl(service.name)}>تعبئة الطلب</a>
             </article>
           ))}
