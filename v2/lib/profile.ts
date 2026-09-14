@@ -9,10 +9,12 @@ export async function ensureProfile(supabase: SupabaseClient, user: User) {
       id: user.id,
       full_name: String(metadata.full_name ?? ""),
       phone: String(metadata.phone ?? ""),
+      email: String(user.email ?? ""),
+      source: "الموقع",
       referral_code: referralCode,
       referred_by: metadata.referral_code ? String(metadata.referral_code) : null
     },
-    { onConflict: "id", ignoreDuplicates: true }
+    { onConflict: "id" }
   );
 
   if (error) throw error;
