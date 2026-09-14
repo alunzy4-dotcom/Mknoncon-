@@ -68,6 +68,11 @@ export default function Home() {
             <p className="eyebrow">الخدمات</p>
             <h2>مجالات متكاملة لاحتياج العميل</h2>
             <div className="grid cards">
+              <article className="card">
+                <h3>طلب استشارة/خدمة</h3>
+                <p className="muted">أرسل تفاصيل احتياجك مباشرة عبر نموذج الطلب، وسنراجع المعلومات لتحديد الخدمة المناسبة.</p>
+                <p><a className="btn" href={consultationUrl} target="_blank" rel="noopener noreferrer">تقديم الطلب</a></p>
+              </article>
               <article className="card"><h3>الاستشارات المالية</h3><p className="muted">تحليل مالي، خطط سيولة، تمويل واستثمار.</p></article>
               <article className="card"><h3>حلول الأعمال</h3><p className="muted">دراسات جدوى، تطوير إجراءات وخطط تنفيذ.</p></article>
               <article className="card"><h3>الخدمات العقارية</h3><p className="muted">دعم القرارات العقارية والتقييم والمتابعة.</p></article>
