@@ -44,6 +44,15 @@ export default async function DashboardPage({ searchParams }: Props) {
         <p>كود الإحالة: <strong>{profile?.referral_code || "—"}</strong></p>
       </section>
 
+      <section className="panel finance-entry">
+        <div>
+          <p className="eyebrow">جديد</p>
+          <h2>حاسبة الراتب والمصروفات</h2>
+          <p className="muted">سجّل دخلك والتزاماتك، واحصل على الفائض أو العجز وتوزيع المصروفات مع حفظ شهري في حسابك.</p>
+        </div>
+        <Link className="btn" href="/dashboard/finance">فتح الحاسبة</Link>
+      </section>
+
       <section className="panel">
         <h2>طلب جديد</h2>
         <form action={createRequest}>
