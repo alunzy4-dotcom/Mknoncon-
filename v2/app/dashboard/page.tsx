@@ -1,28 +1,46 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "../actions";
-import { createRequest } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+const TALLY_FORM_URL = "https://tally.so/r/kdoLl1";
+
+const services = [
+  { name: "استشارات مالية", description: "تمويل، التزامات، حلول مالية ودراسة الخيارات المناسبة." },
+  { name: "حلول أعمال", description: "ترتيب فكرة مشروع أو تطوير نشاط قائم وخطة التنفيذ." },
+  { name: "دراسة جدوى", description: "تقدير التكاليف والإيرادات والجدوى الأولية للمشروع." },
+  { name: "خدمات عقارية", description: "طلبات واستشارات تتعلق بالعقار والتمويل العقاري." },
+  { name: "خدمات حكومية", description: "مساعدة في الطلبات والإجراءات والخدمات الحكومية." },
+  { name: "حلول رقمية", description: "مواقع، نماذج، أتمتة وربط الأدوات الرقمية." },
+  { name: "أخرى", description: "أي طلب لا يندرج تحت الخدمات السابقة." }
+];
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+function tallyUrl(service: string) {
+  const params = new URLSearchParams({
+    service,
+    source: "website"
+  });
+  return `${TALLY_FORM_URL}?${params.toString()}`;
+}
+
 export default async function DashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const message = typeof params.message === "string" ? params.message : "";
-  const error = typeof params.error === "string" ? params.error : "";
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (!userId) redirect("/login");
 
-  const [{ data: profile }, { data: requests }] = await Promise.all([
-    supabase.from("profiles").select("full_name,phone,referral_code").eq("id", userId).maybeSingle(),
-    supabase.from("requests").select("id,service_type,details,status,created_at").eq("user_id", userId).order("created_at", { ascending: false })
-  ]);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name,phone,email,referral_code")
+    .eq("id", userId)
+    .maybeSingle();
 
   return (
     <main className="container section">
@@ -34,47 +52,31 @@ export default async function DashboardPage({ searchParams }: Props) {
         <form action={signOut}><button className="btn alt" type="submit">تسجيل الخروج</button></form>
       </div>
 
-      {message === "request_created" && <div className="notice">تم إرسال طلبك بنجاح.</div>}
-      {error === "invalid_request" && <div className="notice">اكتب تفاصيل الطلب بشكل أوضح قبل الإرسال.</div>}
-      {error === "request_failed" && <div className="notice">تعذر حفظ الطلب. لم يتم فقدان الجلسة؛ حاول مرة أخرى.</div>}
+      {message === "request_sent" && <div className="notice">تم إرسال طلبك بنجاح وسنتابع معك.</div>}
 
       <section className="panel">
         <h2>بيانات الحساب</h2>
         <p className="muted">{profile?.phone || "—"}</p>
+        <p className="muted" dir="ltr">{profile?.email || "—"}</p>
         <p>كود الإحالة: <strong>{profile?.referral_code || "—"}</strong></p>
       </section>
 
       <section className="panel">
-        <h2>طلب جديد</h2>
-        <form action={createRequest}>
-          <div className="field">
-            <label>نوع الخدمة</label>
-            <select name="service_type" required>
-              <option value="">اختر الخدمة</option>
-              <option>استشارات مالية</option>
-              <option>حلول أعمال</option>
-              <option>دراسة جدوى</option>
-              <option>خدمات عقارية</option>
-              <option>خدمات حكومية</option>
-              <option>حلول رقمية</option>
-              <option>أخرى</option>
-            </select>
-          </div>
-          <div className="field"><label>تفاصيل الطلب</label><textarea name="details" required /></div>
-          <button className="btn" type="submit">إرسال الطلب</button>
-        </form>
-      </section>
+        <p className="eyebrow">طلب خدمة</p>
+        <h2>اختر الخدمة التي تحتاجها</h2>
+        <p className="muted">بعد اختيار الخدمة سيفتح نموذج مكنون كون لإكمال تفاصيل طلبك.</p>
 
-      <section className="panel">
-        <h2>طلباتي</h2>
-        {!requests?.length ? <p className="muted">لا توجد طلبات حتى الآن.</p> : requests.map((r) => (
-          <article className="request" key={r.id}>
-            <div className="top"><strong>{r.service_type}</strong><span className="status">{r.status}</span></div>
-            <p>{r.details}</p>
-            <small className="muted">{new Date(r.created_at).toLocaleString("ar-SA")}</small>
-            <p><Link href={`/dashboard/requests/${r.id}`}>عرض تفاصيل الطلب وسجل التحديثات</Link></p>
-          </article>
-        ))}
+        <div className="service-grid">
+          {services.map((service) => (
+            <article className="service-card" key={service.name}>
+              <div>
+                <h3>{service.name}</h3>
+                <p>{service.description}</p>
+              </div>
+              <a className="btn" href={tallyUrl(service.name)}>تعبئة الطلب</a>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );
