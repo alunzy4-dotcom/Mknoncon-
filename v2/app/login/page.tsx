@@ -19,6 +19,9 @@ export default async function LoginPage({ searchParams }: Props) {
   const signup = params.mode === "signup";
   const message = typeof params.message === "string" ? params.message : "";
   const error = typeof params.error === "string" ? params.error : "";
+  const next = typeof params.next === "string" && params.next.startsWith("/") && !params.next.startsWith("//")
+    ? params.next
+    : "/dashboard";
 
   return (
     <main className="auth">
@@ -39,15 +42,16 @@ export default async function LoginPage({ searchParams }: Props) {
             <div className="field"><label>كلمة المرور</label><input name="password" type="password" minLength={8} autoComplete="new-password" required /></div>
             <div className="field"><label>كود الإحالة - اختياري</label><input name="referral_code" /></div>
             <button className="btn" type="submit">إنشاء الحساب</button>
-            <p className="muted">لديك حساب؟ <Link href="/login">تسجيل الدخول</Link></p>
+            <p className="muted">لديك حساب؟ <Link href={`/login?next=${encodeURIComponent(next)}`}>تسجيل الدخول</Link></p>
           </form>
         ) : (
           <form action={signIn}>
+            <input type="hidden" name="next" value={next} />
             <div className="field"><label>البريد الإلكتروني</label><input name="email" type="email" autoComplete="email" required /></div>
             <div className="field"><label>كلمة المرور</label><input name="password" type="password" autoComplete="current-password" required /></div>
             <button className="btn" type="submit">تسجيل الدخول</button>
             <p><Link href="/forgot-password">نسيت كلمة المرور؟</Link></p>
-            <p className="muted">ليس لديك حساب؟ <Link href="/login?mode=signup">إنشاء حساب</Link></p>
+            <p className="muted">ليس لديك حساب؟ <Link href={`/login?mode=signup&next=${encodeURIComponent(next)}`}>إنشاء حساب</Link></p>
           </form>
         )}
 

@@ -4,22 +4,28 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/profile";
 
+function safeNext(value: FormDataEntryValue | null) {
+  const next = String(value ?? "");
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+}
+
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const next = safeNext(formData.get("next"));
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error || !data.user) redirect("/login?error=invalid_login");
+  if (error || !data.user) redirect(`/login?error=invalid_login&next=${encodeURIComponent(next)}`);
 
   try {
     await ensureProfile(supabase, data.user);
   } catch {
-    redirect("/login?error=profile_setup");
+    redirect(`/login?error=profile_setup&next=${encodeURIComponent(next)}`);
   }
 
-  redirect("/dashboard");
+  redirect(next);
 }
 
 export async function signUp(formData: FormData) {

@@ -9,7 +9,7 @@ export default async function MortgagePage() {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
-  if (!userId) redirect("/login");
+  if (!userId) redirect("/login?next=%2Fdashboard%2Fmortgage");
 
   return (
     <main className="container section">
