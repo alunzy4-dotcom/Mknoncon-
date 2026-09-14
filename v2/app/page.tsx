@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const consultationUrl = "https://app.notion.com/p/31b15c4f14194125a205d92e3a78572e?pvs=106";
+const consultationUrl = "https://tally.so/r/kdoLl1";
 
 export default function Home() {
   return (
